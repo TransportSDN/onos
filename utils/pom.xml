@@ -37,7 +37,6 @@
         <module>osgi</module>
         <module>rest</module>
         <module>osgiwrap</module>
-        <module>ymsutils</module>
     </modules>
 
     <dependencies>
