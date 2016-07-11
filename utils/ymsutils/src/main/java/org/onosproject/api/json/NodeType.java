@@ -23,17 +23,17 @@ package org.onosproject.api.json;
 public enum NodeType {
 
     /**
-     * Object node
+     * Object node.
      */
     Object,
 
     /**
-     * Array node
+     * Array node.
      */
     Array,
 
     /**
-     * Text node
+     * Text node.
      */
     Text
 }

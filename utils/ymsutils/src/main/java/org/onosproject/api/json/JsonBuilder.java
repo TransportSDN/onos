@@ -16,6 +16,8 @@
 package org.onosproject.api.json;
 
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.Set;
 
 /**
@@ -61,4 +63,18 @@ public interface JsonBuilder {
      * @param nodeType the type of the child
      */
     void addNodeBottomHalf(NodeType nodeType);
+
+    /**
+     * Returns the JSON tree after build operations in the format of string.
+     *
+     * @return the final string JSON tree after build operations
+     */
+    String getTreeString();
+
+    /**
+     * Returns the JSON tree after build operations in the format of string.
+     *
+     * @return the final ObjectNode JSON tree after build operations
+     */
+    ObjectNode getTreeNode();
 }
