@@ -123,7 +123,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
             if (sparseAnnotations.isRemoved(key)) {
                 merged.remove(key);
             } else {
-                merged.put(key, sparseAnnotations.value(key));
+                merged.put(key, sparseAnnotations.value(key, Object.class));
             }
         }
         return new DefaultAnnotations(merged);
@@ -179,8 +179,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
                     newMap.put(key, Builder.REMOVED);
                 }
             } else {
-                String value = sparseAnnotations.value(key);
-                newMap.put(key, value);
+                newMap.put(key, sparseAnnotations.value(key, Object.class));
             }
         }
     }
