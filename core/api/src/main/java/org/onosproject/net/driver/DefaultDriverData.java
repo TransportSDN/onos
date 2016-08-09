@@ -20,6 +20,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.MutableAnnotations;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -82,6 +83,16 @@ public class DefaultDriverData implements DriverData {
     @Override
     public String value(String key) {
         return properties.get(key);
+    }
+
+    @Override
+    public <T> T value(String key, Class<T> typeClass) {
+        throw new UnsupportedOperationException("Entity's value is String");
+    }
+
+    @Override
+    public <T> List<T> values(String key, Class<T> typeClass) {
+        throw new UnsupportedOperationException("Entity's value is String");
     }
 
     @Override

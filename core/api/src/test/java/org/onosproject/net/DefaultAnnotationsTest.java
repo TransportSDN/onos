@@ -17,6 +17,9 @@ package org.onosproject.net;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.google.common.collect.ImmutableSet.of;
 import static org.junit.Assert.*;
 import static org.onosproject.net.DefaultAnnotations.builder;
@@ -36,6 +39,30 @@ public class DefaultAnnotationsTest {
         assertEquals("incorrect value", "2", annotations.value("bar"));
     }
 
+    @Test
+    public void objectKey() {
+        InternalObject object1 = new InternalObject(1 ,"hello");
+        InternalObject object2 = new InternalObject(2 ,"world");
+        annotations = builder()
+                .set("object1", object1)
+                .set("object2", object2)
+                .build();
+        assertEquals("incorrect key", of("object1", "object2"), annotations.keys());
+        assertEquals("incorrect value", object1, annotations.value("object1", InternalObject.class));
+        assertEquals("incorrect value", object2, annotations.value("object2", InternalObject.class));
+    }
+
+    @Test
+    public void objectKeys() {
+        List<InternalObject> objects = new ArrayList<>();
+        InternalObject object1 = new InternalObject(1 ,"hello");
+        InternalObject object2 = new InternalObject(2 ,"world");
+        objects.add(object1);
+        objects.add(object2);
+        annotations = builder().set("objects", objects).build();
+        assertEquals("incorrect key", of("objects"), annotations.keys());
+        assertEquals("incorrect value", objects, annotations.values("objects", InternalObject.class));
+    }
     @Test
     public void empty() {
         annotations = builder().build();
@@ -95,6 +122,24 @@ public class DefaultAnnotationsTest {
     @Test(expected = NullPointerException.class)
     public void badMerge() {
         DefaultAnnotations.merge(null, null);
+    }
+
+    private class InternalObject {
+        private int id;
+        private String content;
+
+        InternalObject(int id, String content) {
+            this.id = id;
+            this.content = content;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getContent() {
+            return content;
+        }
     }
 
 }

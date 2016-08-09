@@ -15,13 +15,14 @@
  */
 package org.onosproject.net;
 
+import com.google.common.collect.Maps;
+
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import com.google.common.collect.Maps;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -33,7 +34,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
 
     public static final SparseAnnotations EMPTY = DefaultAnnotations.builder().build();
 
-    private final Map<String, String> map;
+    private final Map<String, ?> map;
 
     // For serialization
     private DefaultAnnotations() {
@@ -66,7 +67,15 @@ public final class DefaultAnnotations implements SparseAnnotations {
      * @return a copy of the contents of the annotations as a map.
      */
     public HashMap<String, String> asMap() {
-        return Maps.newHashMap(this.map);
+        HashMap<String, String> tempMap = new HashMap<>();
+        this.map.keySet().forEach(key-> {
+            Object o = this.map.get(key);
+            if (!(o instanceof String)) {
+                throw new UnsupportedOperationException("Only string value is supported");
+            }
+            tempMap.put(key, (String) this.map.get(key));
+        });
+        return Maps.newHashMap(tempMap);
     }
 
     /**
@@ -74,7 +83,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
      *
      * @param map hash map of key/value pairs
      */
-    private DefaultAnnotations(Map<String, String> map) {
+    private DefaultAnnotations(Map<String, ?> map) {
         this.map = map;
     }
 
@@ -109,7 +118,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
         // Merge the two maps. Yes, this is not very efficient, but the
         // use-case implies small maps and infrequent merges, so we opt for
         // simplicity.
-        Map<String, String> merged = copy(annotations.map);
+        Map<String, Object> merged = copy(annotations.map);
         for (String key : sparseAnnotations.keys()) {
             if (sparseAnnotations.isRemoved(key)) {
                 merged.remove(key);
@@ -124,7 +133,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
      * Creates the union of two given SparseAnnotations.
      * Unlike the {@link #merge(DefaultAnnotations, SparseAnnotations)} method,
      * result will be {@link SparseAnnotations} instead of {@link Annotations}.
-     *
+     * <p>
      * A key tagged for removal will remain in the output SparseAnnotations,
      * if the counterpart of the input does not contain the same key.
      *
@@ -140,12 +149,12 @@ public final class DefaultAnnotations implements SparseAnnotations {
             return annotations;
         }
 
-        final HashMap<String, String> newMap;
+        final HashMap<String, Object> newMap;
         if (annotations instanceof DefaultAnnotations) {
             newMap = copy(((DefaultAnnotations) annotations).map);
         } else {
             newMap = new HashMap<>(annotations.keys().size() +
-                                   sparseAnnotations.keys().size());
+                                           sparseAnnotations.keys().size());
             putAllSparseAnnotations(newMap, annotations);
         }
 
@@ -159,8 +168,8 @@ public final class DefaultAnnotations implements SparseAnnotations {
     // if corresponding key does not exist, removal tag will be added to
     // the newMap.
     private static void putAllSparseAnnotations(
-                            final HashMap<String, String> newMap,
-                            SparseAnnotations sparseAnnotations) {
+            final HashMap<String, Object> newMap,
+            SparseAnnotations sparseAnnotations) {
 
         for (String key : sparseAnnotations.keys()) {
             if (sparseAnnotations.isRemoved(key)) {
@@ -183,8 +192,39 @@ public final class DefaultAnnotations implements SparseAnnotations {
 
     @Override
     public String value(String key) {
-        String value = map.get(key);
-        return Objects.equals(Builder.REMOVED, value) ? null : value;
+        Object o = map.get(key);
+        if (o == null) {
+            return null;
+        }
+
+        if (o instanceof String) {
+            String value = (String) o;
+            return Objects.equals(Builder.REMOVED, value) ? null : value;
+        }
+        throw new IllegalArgumentException("Expecting String type");
+    }
+
+    @Override
+    public <T> T value(String key, Class<T> typeClass) {
+        Object o = map.get(key);
+        if (typeClass.isInstance(o)) {
+            return (T) o;
+        }
+        throw new IllegalArgumentException("Expecting specific instance");
+    }
+
+    @Override
+    public <T> List<T> values(String key, Class<T> typeClass) {
+        Object o = map.get(key);
+        if (o instanceof List) {
+        List<?> values = (List<?>) o;
+            if (typeClass.isInstance(values.get(0))) {
+                return (List<T>) values;
+            }
+            throw new IllegalArgumentException("Expecting specific instance");
+        }
+
+        throw new IllegalArgumentException("Expecting List instance");
     }
 
     @Override
@@ -193,9 +233,9 @@ public final class DefaultAnnotations implements SparseAnnotations {
     }
 
     @SuppressWarnings("unchecked")
-    private static HashMap<String, String> copy(Map<String, String> original) {
+    private static HashMap<String, Object> copy(Map<String, ?> original) {
         if (original instanceof HashMap) {
-            return (HashMap<String, String>) ((HashMap<?, ?>) original).clone();
+            return (HashMap<String, Object>) ((HashMap<?, ?>) original).clone();
         }
         throw new IllegalArgumentException("Expecting HashMap instance");
     }
@@ -211,7 +251,7 @@ public final class DefaultAnnotations implements SparseAnnotations {
     public static final class Builder {
 
         private static final String REMOVED = "~rEmOvEd~";
-        private final Map<String, String> builder = new HashMap<>();
+        private final Map<String, Object> builder = new HashMap<>();
 
         // Private construction is forbidden.
         private Builder() {
@@ -255,6 +295,20 @@ public final class DefaultAnnotations implements SparseAnnotations {
          */
         public Builder set(String key, String value) {
             builder.put(key, value);
+            return this;
+        }
+
+        /**
+         * Adds the specified annotation, the client is unaware of the specific
+         * type of the value. Any previous value associated with the given
+         * annotation key will be overwritten.
+         *
+         * @param key     annotation key
+         * @param object  annotation value
+         * @return self
+         */
+        public Builder set(String key, Object object) {
+            builder.put(key, object);
             return this;
         }
 
