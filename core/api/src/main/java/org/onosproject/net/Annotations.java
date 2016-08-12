@@ -15,6 +15,7 @@
  */
 package org.onosproject.net;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,4 +38,23 @@ public interface Annotations {
      */
     String value(String key);
 
+    /**
+     * Returns the specified type of value of the specified annotation.
+     *
+     * @param key annotation key
+     * @param typeClass requested type class of the value
+     * @param <T> value type
+     * @return the specified type of annotation value
+     */
+    <T> T value(String key, Class<T> typeClass);
+
+    /**
+     * Returns a list of specified type of values of the specified annotation.
+     *
+     * @param key annotation key
+     * @param typeClass requested type class of the value
+     * @param <T> value type
+     * @return list of the specified type of values
+     */
+    <T> List<T> values(String key, Class<T> typeClass);
 }

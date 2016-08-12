@@ -231,6 +231,16 @@ public class DefaultDriver implements Driver {
     }
 
     @Override
+    public <T> T value(String key, Class<T> typeClass) {
+        throw new UnsupportedOperationException("Entity's value is String");
+    }
+
+    @Override
+    public <T> List<T> values(String key, Class<T> typeClass) {
+        throw new UnsupportedOperationException("Entity's value is String");
+    }
+
+    @Override
     public Map<String, String> properties() {
         return properties;
     }

@@ -97,4 +97,14 @@ public class DriverAdapter implements Driver {
     public String value(String key) {
         return null;
     }
+
+    @Override
+    public <T> T value(String key, Class<T> typeClass) {
+        return null;
+    }
+
+    @Override
+    public <T> List<T> values(String key, Class<T> typeClass) {
+        return null;
+    }
 }
