@@ -32,7 +32,7 @@ public class AnnotationsSerializer extends Serializer<DefaultAnnotations> {
 
     @Override
     public void write(Kryo kryo, Output output, DefaultAnnotations object) {
-        kryo.writeObject(output, object.asMap());
+        kryo.writeObject(output, object.map());
     }
 
     @Override

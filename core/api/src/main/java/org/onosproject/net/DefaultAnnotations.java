@@ -62,19 +62,33 @@ public final class DefaultAnnotations implements SparseAnnotations {
     }
 
     /**
-     * Returns the annotations as a map.
+     * Returns the annotations as a String-String map.
      *
      * @return a copy of the contents of the annotations as a map.
      */
     public HashMap<String, String> asMap() {
+        if (this.map == null) {
+            return Maps.newHashMap();
+        }
+
         HashMap<String, String> tempMap = new HashMap<>();
-        this.map.keySet().forEach(key-> {
-            Object o = this.map.get(key);
-            if (!(o instanceof String)) {
-                throw new UnsupportedOperationException("Only string value is supported");
-            }
-            tempMap.put(key, (String) this.map.get(key));
-        });
+        this.map.keySet().forEach(key -> tempMap.put(key, this.map.get(key).toString()));
+        return Maps.newHashMap(tempMap);
+
+    }
+
+    /**
+     * Returns the annotations as a String-Object map.
+     *
+     * @return a copy of the contents of the annotations as a map.
+     */
+    public Map<String, Object> map() {
+        if (this.map == null) {
+            return Maps.newHashMap();
+        }
+
+        HashMap<String, Object> tempMap = new HashMap<>();
+        this.map.keySet().forEach(key-> tempMap.put(key, this.map.get(key)));
         return Maps.newHashMap(tempMap);
     }
 
