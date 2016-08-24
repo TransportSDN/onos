@@ -26,6 +26,7 @@ import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -193,6 +194,16 @@ public abstract class AbstractProjectableModel extends AbstractModel implements 
         @Override
         public String value(String key) {
             return annotations().value(key);
+        }
+
+        @Override
+        public <T> T value(String key, Class<T> typeClass) {
+            throw new UnsupportedOperationException("Entity's value is String");
+        }
+
+        @Override
+        public <T> List<T> values(String key, Class<T> typeClass) {
+            throw new UnsupportedOperationException("Entity's value is String");
         }
     }
 
