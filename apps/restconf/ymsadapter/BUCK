@@ -1,0 +1,12 @@
+COMPILE_DEPS = [
+    '//lib:CORE_DEPS',
+    '//lib:jersey-client',
+    '//lib:javax.ws.rs-api',
+    '//utils/rest:onlab-rest',
+    '//apps/restconf/api:onos-apps-restconf-api',
+    '//apps/restconf/common:onos-apps-restconf-common',
+]
+
+osgi_jar_with_tests (
+    deps = COMPILE_DEPS,
+)
