@@ -39,11 +39,17 @@ import org.onosproject.event.ListenerTracker;
 import org.onosproject.restconf.api.RestconfException;
 import org.onosproject.restconf.api.RestconfService;
 import org.onosproject.restconf.common.DataResourceIdentifier;
+import org.onosproject.restconf.utils.parser.json.ParserUtils;
 import org.onosproject.restconf.ymsadapter.api.YmsAdapterResponse;
 import org.onosproject.restconf.ymsadapter.api.YmsAdapterService;
 import org.onosproject.restconf.ymsadapter.api.YangNotificationEvent;
 import org.onosproject.restconf.ymsadapter.api.YangNotificationListener;
 import org.onosproject.restconf.ymsadapter.api.YmsDataOperationType;
+import org.onosproject.yms.ydt.YdtBuilder;
+import org.onosproject.yms.ydt.YdtResponse;
+import org.onosproject.yms.ydt.YmsOperationExecutionStatus;
+import org.onosproject.yms.ymsm.YmsOperationType;
+import org.onosproject.yms.ymsm.YmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,17 +60,17 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * Skeletal ONOS RESTCONF Server application. The RESTCONF Manager
  * implements the main logic of the RESTCONF Server.
- * <p>
+ * <p/>
  * The design of the RESTCONF subsystem contains contains 3 major bundles:
- * <p>
+ * <p/>
  * 1. RESTCONF Protocol Proxy (RPP). This bundle is implemented as a JAX-RS application.
  * It acts as the frond-end of the the RESTCONF server. It handles
  * HTTP requests that are sent to the RESTCONF Root Path. It then calls the RESTCONF Manager
  * to process the requests.
- * <p>
+ * <p/>
  * 2. RESTCONF Manager. This is the back-end. It provides the main logic of the RESTCONF server.
  * It calls the YMS Adapter to operate on the YANG data objects.
- * <p>
+ * <p/>
  * 3. YMS Adapter. This bundle is a shim layer between the RESTCONF Manager and the YANG Management
  * System (YMS). It converts RESTCONF Server specific data structure, such as JSON objects, into
  * YMS data structure (e.g., YDT), and vice versa. Another reason for creating this adaptation layer is
@@ -84,19 +90,22 @@ public class RestconfMgr implements RestconfService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected YmsAdapterService ymsAdapterService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected YmsService ymsService;
+
     private ListenerTracker listeners;
 
     private ConcurrentMap<String, BlockingQueue<ObjectNode>> eventQueueList =
-            new ConcurrentHashMap<String, BlockingQueue<ObjectNode>>();
+            new ConcurrentHashMap<>();
 
     private ExecutorService workerThreadPool;
 
     @Activate
     protected void activate() {
         workerThreadPool = Executors.newFixedThreadPool(maxNumOfWorkerThreads,
-                                                        new ThreadFactoryBuilder()
-                                                                .setNameFormat("restconf-worker")
-                                                                .build());
+                new ThreadFactoryBuilder()
+                        .setNameFormat("restconf-worker")
+                        .build());
         listeners = new ListenerTracker();
         listeners.addListener(ymsAdapterService, new InternalYangNotificationListener());
         log.info("RestconfMgr Started");
@@ -111,54 +120,75 @@ public class RestconfMgr implements RestconfService {
 
     @Override
     public ObjectNode doGetOperation(URI uri) throws RestconfException {
-        DataResourceIdentifier drId = new DataResourceIdentifier.Builder(getRestconfRootPath(), uri).build();
-        YmsAdapterResponse output = ymsAdapterService.dataResourceOperation(drId, YmsDataOperationType.READ, null);
+        String identifier = uri.getPath().substring(getRestconfRootPath().length());
+        //Get a root ydtBuilder
+        YdtBuilder ydtBuilder = ymsService.getYdtBuilder(getRestconfRootPath(), null, YmsOperationType.QUERY);
+        //Convert the URI to ydtBuilder
+        ParserUtils.convertUriToYdt(identifier, ydtBuilder);
+        //Execute the query operation
+        YdtResponse ydtResponse = ymsService.executeOperation(ydtBuilder);
 
-        if (!output.hasData()) {
-            throw new RestconfException("YMS Adapter READ operation returns no data", Status.INTERNAL_SERVER_ERROR);
+        YmsOperationExecutionStatus executionStatus = ydtResponse.getYmsOperationResult();
+        if (executionStatus != YmsOperationExecutionStatus.EXECUTION_SUCCESS) {
+            throw new RestconfException("YMS query operation failed",
+                    Status.INTERNAL_SERVER_ERROR);
         }
-
-        return output.getJsonData();
+        return ParserUtils.convertYdtToJson(ydtResponse.getRootNode(), ymsService.getYdtWalker());
     }
 
     @Override
     public void doPostOperation(URI uri, ObjectNode rootNode) {
-        DataResourceIdentifier drId = new DataResourceIdentifier.Builder(getRestconfRootPath(), uri).build();
-        YmsAdapterResponse output = ymsAdapterService.dataResourceOperation(drId, YmsDataOperationType.CREATE, null);
-
-        if (!output.isSuccessful()) {
-            throw new RestconfException("YMS Adapter CREATE operation failure", Status.INTERNAL_SERVER_ERROR);
+        String identifier = uri.getPath().substring(getRestconfRootPath().length());
+        //Get a root ydtBuilder
+        YdtBuilder ydtBuilder = ymsService.getYdtBuilder(getRestconfRootPath(), null, YmsOperationType.EDIT_CONFIG);
+        //Convert the URI to ydtBuilder
+        ParserUtils.convertUriToYdt(identifier, ydtBuilder);
+        ParserUtils.convertJsonToYdt(rootNode, ydtBuilder);
+        //Execute the query operation
+        YdtResponse ydtResponse = ymsService.executeOperation(ydtBuilder);
+        YmsOperationExecutionStatus executionStatus = ydtResponse.getYmsOperationResult();
+        if (executionStatus != YmsOperationExecutionStatus.EXECUTION_SUCCESS) {
+            throw new RestconfException("YMS post operation failed.",
+                    Status.INTERNAL_SERVER_ERROR);
         }
     }
 
     @Override
     public void doPutOperation(URI uri, ObjectNode rootNode) throws RestconfException {
-        DataResourceIdentifier drId = new DataResourceIdentifier.Builder(getRestconfRootPath(), uri).build();
-        YmsAdapterResponse output = ymsAdapterService.dataResourceOperation(drId, YmsDataOperationType.CREATE, null);
-
-        if (!output.isSuccessful()) {
-            throw new RestconfException("YMS Adapter CREATE operation failure", Status.INTERNAL_SERVER_ERROR);
+        String identifier = uri.getPath().substring(getRestconfRootPath().length());
+        //Get a root ydtBuilder
+        YdtBuilder ydtBuilder = ymsService.getYdtBuilder(getRestconfRootPath(), null, YmsOperationType.EDIT_CONFIG);
+        //Convert the URI to ydtBuilder
+        ParserUtils.convertUriToYdt(identifier, ydtBuilder);
+        ParserUtils.convertJsonToYdt(rootNode, ydtBuilder);
+        //Execute the query operation
+        YdtResponse ydtResponse = ymsService.executeOperation(ydtBuilder);
+        YmsOperationExecutionStatus executionStatus = ydtResponse.getYmsOperationResult();
+        if (executionStatus != YmsOperationExecutionStatus.EXECUTION_SUCCESS) {
+            throw new RestconfException("YMS put operation failed.",
+                    Status.INTERNAL_SERVER_ERROR);
         }
     }
 
-    /**
-     * Process the delete operation on a data resource.
-     *
-     * @param uri URI of the data resource to be deleted.
-     */
     @Override
     public void doDeleteOperation(URI uri) throws RestconfException {
-        DataResourceIdentifier drId = new DataResourceIdentifier.Builder(getRestconfRootPath(), uri).build();
-        YmsAdapterResponse output = ymsAdapterService.dataResourceOperation(drId, YmsDataOperationType.DELETE, null);
-
-        if (!output.isSuccessful()) {
-            throw new RestconfException("YMS Adapter DELETE operation failure", Status.INTERNAL_SERVER_ERROR);
+        String identifier = uri.getPath().substring(getRestconfRootPath().length());
+        //Get a root ydtBuilder
+        YdtBuilder ydtBuilder = ymsService.getYdtBuilder(getRestconfRootPath(), null, YmsOperationType.EDIT_CONFIG);
+        //Convert the URI to ydtBuilder
+        ParserUtils.convertUriToYdt(identifier, ydtBuilder);
+        //Execute the query operation
+        YdtResponse ydtResponse = ymsService.executeOperation(ydtBuilder);
+        YmsOperationExecutionStatus executionStatus = ydtResponse.getYmsOperationResult();
+        if (executionStatus != YmsOperationExecutionStatus.EXECUTION_SUCCESS) {
+            throw new RestconfException("YMS put operation failed.",
+                    Status.INTERNAL_SERVER_ERROR);
         }
     }
 
     @Override
     public String getRestconfRootPath() {
-        return this.RESTCONF_ROOT;
+        return RESTCONF_ROOT;
     }
 
     /**

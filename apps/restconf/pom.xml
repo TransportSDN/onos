@@ -36,6 +36,7 @@
         <module>ymsadapter</module>
         <module>rpp</module>
         <module>app</module>
+        <module>utils</module>
     </modules>
 
     <description>RESTCONF Service Module</description>
